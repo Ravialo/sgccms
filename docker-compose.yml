@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  sg_ccms_db:
+    image: mysql:8.0
+    container_name: sg_ccms_db
+    environment:
+      MYSQL_ROOT_PASSWORD: sg_ccms_system
+      MYSQL_DATABASE: sg_ccms
+    ports:
+      - "3306:3306"
+    restart: always
+    volumes:
+      - data:/var/lib/mysql
+
+volumes:
+  data:

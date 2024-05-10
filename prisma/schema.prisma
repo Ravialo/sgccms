@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum SchoolYearDefault {
+  yes
+  no
+}
+
+model SchoolYear {
+  id                Int               @id @default(autoincrement())
+  year              String            @db.VarChar(4)
+  default           SchoolYearDefault
+  deleted           Boolean           @default(false)
+  students          Student[]
+  grades            Grade[]
+  sections          Section[]
+  appointments      Appointment[]
+  complaints        Complaint[]
+  narrative_reports NarrativeReport[]
+  counselor_reports CounselorReport[]
+
+  @@map("school_years")
+}
+
+model Grade {
+  id             Int        @id @default(autoincrement())
+  school_year_id Int
+  school_year    SchoolYear @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  grade          String     @db.VarChar(50)
+  sections       Section[]
+  students       Student[]
+
+  @@map("grades")
+}
+
+model Section {
+  id             Int        @id @default(autoincrement())
+  school_year_id Int
+  school_year    SchoolYear @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  grade_id       Int
+  grade          Grade      @relation(fields: [grade_id], references: [id], onDelete: Cascade)
+  section        String     @db.VarChar(100)
+  advisor        Advisor?
+  students       Student[]
+
+  @@map("sections")
+}
+
+enum UserRole {
+  student
+  advisor
+  counselor
+  principal
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+model User {
+  id                 Int                 @id @default(autoincrement())
+  username           String              @unique @db.VarChar(255)
+  email              String?             @db.VarChar(255)
+  first_name         String              @db.VarChar(255)
+  last_name          String              @db.VarChar(255)
+  password           String              @db.VarChar(255)
+  role               UserRole
+  status             UserStatus
+  deleted_username   String?             @db.VarChar(255)
+  deleted            Boolean             @default(false)
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  advisor            Advisor?
+  student            Student?
+  appointments       Appointment[]
+  complaints         Complaint[]
+  narrative_reports  NarrativeReport[]
+  counselor_reports  CounselorReport[]
+  userResetPasswords UserResetPassword[]
+
+  @@map("users")
+}
+
+model UserResetPassword {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  code         String   @db.VarChar(6)
+  verify_token String   @db.VarChar(500)
+  reset_token  String?  @db.VarChar(500)
+  created_at   DateTime @default(now())
+
+  @@map("user_reset_passwords")
+}
+
+enum StudentGender {
+  male
+  female
+  others
+}
+
+enum StudentStatus {
+  active
+  inactive
+}
+
+model Student {
+  id                     Int                    @id @default(autoincrement())
+  school_year_id         Int
+  school_year            SchoolYear             @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  lrn_no                 String                 @db.VarChar(255)
+  first_name             String                 @db.VarChar(255)
+  middle_name            String?                @db.VarChar(255)
+  last_name              String                 @db.VarChar(255)
+  suffix                 String?                @db.VarChar(255)
+  gender                 StudentGender
+  age                    Int?
+  grade_id               Int
+  grade                  Grade                  @relation(fields: [grade_id], references: [id], onDelete: Cascade)
+  section_id             Int
+  section                Section                @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  user_id                Int                    @unique
+  user                   User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  status                 StudentStatus          @default(active)
+  deleted                Boolean                @default(false)
+  created_at             DateTime               @default(now())
+  updated_at             DateTime               @updatedAt
+  appointments           Appointment[]
+  complaints             Complaint[]
+  narrative_reports      NarrativeReport[]
+  counselor_reports      CounselorReport[]
+  narrativeReportParties NarrativeReportParty[]
+
+  @@map("students")
+}
+
+model Advisor {
+  id         Int     @id @default(autoincrement())
+  section_id Int     @unique
+  section    Section @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  user_id    Int     @unique
+  user       User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("advisors")
+}
+
+enum AppointmentStatus {
+  open
+  pending
+  closed
+  cancelled
+}
+
+model Appointment {
+  id                Int               @id @default(autoincrement())
+  school_year_id    Int
+  school_year       SchoolYear        @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  user_id           Int
+  user              User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  student_id        Int
+  student           Student           @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  date              DateTime?
+  contact_no        String            @db.VarChar(20)
+  purpose           String            @db.VarChar(255)
+  purpose_details   String?           @db.Text
+  status            AppointmentStatus @default(open)
+  deleted           Boolean           @default(false)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  narrative_reports NarrativeReport[]
+  counselor_reports CounselorReport[]
+
+  @@map("appointments")
+}
+
+enum ComplainStatus {
+  open
+  pending
+  closed
+  cancelled
+}
+
+model Complaint {
+  id                Int               @id @default(autoincrement())
+  school_year_id    Int
+  school_year       SchoolYear        @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  user_id           Int
+  user              User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  student_id        Int
+  student           Student           @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  place             String            @db.Text
+  what_happened     String            @db.Text
+  what_behavior     String?           @db.Text
+  behavior_reaction String?           @db.Text
+  learner_reaction  String?           @db.Text
+  recommendation    String?           @db.Text
+  status            ComplainStatus    @default(open)
+  deleted           Boolean           @default(false)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  narrative_reports NarrativeReport[]
+  counselor_reports CounselorReport[]
+
+  @@map("complaints")
+}
+
+model NarrativeReport {
+  id                     Int                    @id @default(autoincrement())
+  school_year_id         Int
+  school_year            SchoolYear             @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  user_id                Int
+  user                   User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  student_id             Int
+  student                Student                @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  appointment_id         Int?
+  appointment            Appointment?           @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  complaint_id           Int?
+  complaint              Complaint?             @relation(fields: [complaint_id], references: [id], onDelete: Cascade)
+  case_report_no         String                 @db.VarChar(255)
+  incident               String                 @db.Text
+  reported_by            String                 @db.VarChar(500)
+  date_reported          String                 @db.VarChar(255)
+  time_reported          String                 @db.VarChar(255)
+  detail_of_event        String                 @db.Text
+  action_taken           String                 @db.Text
+  summary                String                 @db.Text
+  deleted                Boolean                @default(false)
+  created_at             DateTime               @default(now())
+  updated_at             DateTime               @updatedAt
+  narrativeReportParties NarrativeReportParty[]
+
+  @@map("narrative_reports")
+}
+
+model NarrativeReportParty {
+  id                  Int             @id @default(autoincrement())
+  narrative_report_id Int
+  narrative_report    NarrativeReport @relation(fields: [narrative_report_id], references: [id], onDelete: Cascade)
+  student_id          Int
+  student             Student         @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  created_at          DateTime        @default(now())
+
+  @@map("narrative_report_parties")
+}
+
+model CounselorReport {
+  id              Int          @id @default(autoincrement())
+  school_year_id  Int
+  school_year     SchoolYear   @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
+  user_id         Int
+  user            User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  student_id      Int
+  student         Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  appointment_id  Int?
+  appointment     Appointment? @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  complaint_id    Int?
+  complaint       Complaint?   @relation(fields: [complaint_id], references: [id], onDelete: Cascade)
+  summary         String       @db.Text
+  recommendations String       @db.Text
+  deleted         Boolean      @default(false)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  @@map("counselor_reports")
+}
